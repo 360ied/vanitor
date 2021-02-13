@@ -51,8 +51,10 @@ func main() {
 		go run([]byte(prefix))
 	}
 
+	total := uint64(0)
 	for range time.Tick(1 * time.Second) {
 		count := atomic.SwapUint64(&tries, 0)
-		log.Printf("[PROGRESS] Generating %d keys per second.", count)
+		total += count
+		log.Printf("[PROGRESS] Generating %d keys per second. Generated %d keys in total.", count, total)
 	}
 }
