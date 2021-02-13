@@ -16,18 +16,20 @@ import (
 )
 
 var tries uint64
+var enc = base32.StdEncoding.WithPadding(base32.NoPadding)
 
 func run(prefix []byte) {
-	b32pub := make([]byte, base32.StdEncoding.EncodedLen(32))
+	b32pub := make([]byte, enc.EncodedLen(32))
 	seed := make([]byte, ed25519.SeedSize)
+	cutLength := 32 + enc.DecodedLen(len(prefix)) + 1
 start:
 	if _, err := cryptorand.Read(seed); err != nil {
 		panic(err)
 	}
 	key := ed25519.NewKeyFromSeed(seed)
-	base32.StdEncoding.Encode(b32pub, key[32:])
+	enc.Encode(b32pub, key[32:cutLength])
 	if bytes.HasPrefix(b32pub, prefix) {
-		log.Printf("[SUCCESS] FOUND! PUB BASE32: %s", b32pub)
+		log.Printf("[SUCCESS] FOUND! PUB (cut) BASE32: %s", b32pub)
 		log.Printf("[SUCCESS] KEY (torev format): %s", base64.StdEncoding.EncodeToString(key))
 		os.Exit(0)
 	}
