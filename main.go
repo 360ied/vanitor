@@ -7,16 +7,19 @@ import (
 	"encoding/base32"
 	"encoding/base64"
 	"flag"
+	"fmt"
 	"log"
-	"os"
 	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
 )
 
-var tries uint64
-var enc = base32.StdEncoding.WithPadding(base32.NoPadding)
+var (
+	tries uint64
+	hits  uint64
+	enc   = base32.StdEncoding.WithPadding(base32.NoPadding)
+)
 
 func run(prefix []byte) {
 	b32pub := make([]byte, enc.EncodedLen(32))
@@ -29,17 +32,21 @@ start:
 	key := ed25519.NewKeyFromSeed(seed)
 	enc.Encode(b32pub, key[32:cutLength])
 	if bytes.HasPrefix(b32pub, prefix) {
-		log.Printf("[SUCCESS] FOUND! PUB (cut) BASE32: %s", b32pub)
-		log.Printf("[SUCCESS] KEY (torev format): %s", base64.StdEncoding.EncodeToString(key))
-		os.Exit(0)
+		enc.Encode(b32pub, key[32:])
+		b64Key := base64.StdEncoding.EncodeToString(key)
+		hitN := atomic.AddUint64(&hits, 1)
+		log.Printf("\n[SUCCESS] FOUND! PUB BASE32: %s\n[SUCCESS] Key (torev format): %s\n[SUCCESS] Found %d keys so far.", b32pub, b64Key, hitN)
+		fmt.Printf("%s|%s\n", b32pub, b64Key)
 	}
 	atomic.AddUint64(&tries, 1)
 	goto start
 }
 
 func main() {
-	var prefix string
-	var goroutines int
+	var (
+		prefix     string
+		goroutines int
+	)
 	flag.StringVar(&prefix, "prefix", "tor", "Prefix to search for")
 	flag.IntVar(&goroutines, "goroutines", runtime.NumCPU(), "Number of goroutines to spawn")
 	flag.Parse()
