@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/ed25519"
 	cryptorand "crypto/rand"
 	"encoding/base32"
@@ -9,8 +8,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"regexp"
 	"runtime"
-	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -21,18 +20,16 @@ var (
 	enc   = base32.StdEncoding.WithPadding(base32.NoPadding)
 )
 
-func run(prefix []byte) {
+func run(prefix []byte, re *regexp.Regexp) {
 	b32pub := make([]byte, enc.EncodedLen(32))
 	seed := make([]byte, ed25519.SeedSize)
-	cutLength := 32 + enc.DecodedLen(len(prefix)) + 1
 start:
 	if _, err := cryptorand.Read(seed); err != nil {
 		panic(err)
 	}
 	key := ed25519.NewKeyFromSeed(seed)
-	enc.Encode(b32pub, key[32:cutLength])
-	if bytes.HasPrefix(b32pub, prefix) {
-		enc.Encode(b32pub, key[32:])
+	enc.Encode(b32pub, key[32:])
+	if re.Match(b32pub) {
 		b64Key := base64.StdEncoding.EncodeToString(key)
 		hitN := atomic.AddUint64(&hits, 1)
 		log.Printf("\n[SUCCESS] FOUND! PUB BASE32: %s\n[SUCCESS] Key (torev format): %s\n[SUCCESS] Found %d keys so far.", b32pub, b64Key, hitN)
@@ -44,20 +41,21 @@ start:
 
 func main() {
 	var (
-		prefix     string
+		reS        string
 		goroutines int
 	)
-	flag.StringVar(&prefix, "prefix", "tor", "Prefix to search for")
+	flag.StringVar(&reS, "re", "tor", "Regex to match")
 	flag.IntVar(&goroutines, "goroutines", runtime.NumCPU(), "Number of goroutines to spawn")
 	flag.Parse()
 
-	prefix = strings.ToUpper(prefix)
+	reS = `(?i)` + reS // case insensitive matching
+	re := regexp.MustCompile(reS)
 
-	log.Printf("[INFO] Searching for a public key with the prefix of: %s", prefix)
+	log.Printf("[INFO] Searching for a public key that matches: %s", reS)
 	log.Printf("[INFO] Spawning %d goroutines.", goroutines)
 
 	for i := 0; i < goroutines; i++ {
-		go run([]byte(prefix))
+		go run([]byte(reS), re)
 	}
 
 	total := uint64(0)
