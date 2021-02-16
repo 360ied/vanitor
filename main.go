@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	tries uint64
-	hits  uint64
-	enc   = base32.StdEncoding.WithPadding(base32.NoPadding)
+	tries     uint64
+	hits      uint64
+	enc       = base32.StdEncoding.WithPadding(base32.NoPadding)
+	startTime = time.Now()
 )
 
 func run(prefix []byte, re *regexp.Regexp) {
@@ -32,7 +33,13 @@ start:
 	if re.Match(b32pub) {
 		b64Key := base64.StdEncoding.EncodeToString(key)
 		hitN := atomic.AddUint64(&hits, 1)
-		log.Printf("\n[SUCCESS] FOUND! PUB BASE32: %s\n[SUCCESS] Key (torev format): %s\n[SUCCESS] Found %d keys so far.", b32pub, b64Key, hitN)
+		hitsPerMinute := float64(hitN) / time.Since(startTime).Minutes()
+		log.Printf("\n[SUCCESS] FOUND! PUB BASE32: %s\n"+
+			"[SUCCESS] Key (torev format): %s\n"+
+			"[SUCCESS] Found %d keys so far. %g/minute %g/hour %g/day %g/week",
+			b32pub,
+			b64Key,
+			hitN, hitsPerMinute, hitsPerMinute*60, hitsPerMinute*60*24, hitsPerMinute*60*24*7)
 		fmt.Printf("%s|%s\n", b32pub, b64Key)
 	}
 	atomic.AddUint64(&tries, 1)
