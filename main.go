@@ -21,7 +21,7 @@ var (
 	startTime = time.Now()
 )
 
-func run(prefix []byte, re *regexp.Regexp) {
+func run(re *regexp.Regexp) {
 	b32pub := make([]byte, enc.EncodedLen(32))
 	seed := make([]byte, ed25519.SeedSize)
 start:
@@ -62,7 +62,7 @@ func main() {
 	log.Printf("[INFO] Spawning %d goroutines.", goroutines)
 
 	for i := 0; i < goroutines; i++ {
-		go run([]byte(reS), re)
+		go run(re)
 	}
 
 	total := uint64(0)
