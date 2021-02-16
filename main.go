@@ -36,7 +36,7 @@ start:
 		hitsPerMinute := float64(hitN) / time.Since(startTime).Minutes()
 		log.Printf("\n[SUCCESS] FOUND! PUB BASE32: %s\n"+
 			"[SUCCESS] Key (torev format): %s\n"+
-			"[SUCCESS] Found %d keys so far. %g/minute %g/hour %g/day %g/week",
+			"[SUCCESS] Found %d keys so far. %.1f/minute %.1f/hour %.1f/day %.1f/week",
 			b32pub,
 			b64Key,
 			hitN, hitsPerMinute, hitsPerMinute*60, hitsPerMinute*60*24, hitsPerMinute*60*24*7)
