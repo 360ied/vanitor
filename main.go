@@ -21,6 +21,20 @@ var (
 	startTime = time.Now()
 )
 
+func reportHit(key ed25519.PrivateKey, b32pub []byte) {
+	b64Key := base64.StdEncoding.EncodeToString(key)
+	hitN := atomic.AddUint64(&hits, 1)
+	hitsPerMinute := float64(hitN) / time.Since(startTime).Minutes()
+	log.Printf("\n"+
+		"[SUCCESS] FOUND! PUB BASE32: %s\n"+
+		"[SUCCESS] Key (torev format): %s\n"+
+		"[SUCCESS] Found %d keys so far. %.1f/minute %.1f/hour %.1f/day %.1f/week",
+		b32pub,
+		b64Key,
+		hitN, hitsPerMinute, hitsPerMinute*60, hitsPerMinute*60*24, hitsPerMinute*60*24*7)
+	fmt.Printf("%s|%s\n", b32pub, b64Key)
+}
+
 func run(re *regexp.Regexp) {
 	b32pub := make([]byte, enc.EncodedLen(32))
 	seed := make([]byte, ed25519.SeedSize)
@@ -31,17 +45,7 @@ func run(re *regexp.Regexp) {
 		key := ed25519.NewKeyFromSeed(seed)
 		enc.Encode(b32pub, key[32:])
 		if re.Match(b32pub) {
-			b64Key := base64.StdEncoding.EncodeToString(key)
-			hitN := atomic.AddUint64(&hits, 1)
-			hitsPerMinute := float64(hitN) / time.Since(startTime).Minutes()
-			log.Printf("\n"+
-				"[SUCCESS] FOUND! PUB BASE32: %s\n"+
-				"[SUCCESS] Key (torev format): %s\n"+
-				"[SUCCESS] Found %d keys so far. %.1f/minute %.1f/hour %.1f/day %.1f/week",
-				b32pub,
-				b64Key,
-				hitN, hitsPerMinute, hitsPerMinute*60, hitsPerMinute*60*24, hitsPerMinute*60*24*7)
-			fmt.Printf("%s|%s\n", b32pub, b64Key)
+			reportHit(key, b32pub)
 		}
 		atomic.AddUint64(&tries, 1)
 	}
